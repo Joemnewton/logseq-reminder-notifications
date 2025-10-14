@@ -5,35 +5,62 @@ All notable changes to the Logseq Reminder Notifications plugin will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2025-10-14
+# Changelog
 
-### Added
-- **All-day reminders** - Enable notifications for blocks scheduled without specific times (e.g., `SCHEDULED: <2025-10-14>`)
-- **Configurable all-day time** - Set default reminder time for all-day blocks (default 9:00 AM)
-- **Multiple reminder intervals** - Get reminded at multiple times before scheduled events (e.g., 60, 30, 15, 5 minutes before)
-- **Quiet hours** - Disable notifications during specified hours (default 10 PM - 7 AM)
-- **Weekend mode** - Reduce reminder frequency on weekends
-- **Overdue reminders** - Continue getting reminded about missed scheduled items
-- **Custom notification prefixes** - Personalize notification titles
-- **Notification sound control** - Enable/disable notification sounds
-- **Enhanced lead time** - Extended maximum lead time to 2 hours
+## [1.2.2] - 2025-10-14 - STABLE RELEASE
+### 🚨 Critical Bug Fixes
+- **FIXED**: Syntax error in parseScheduledDateTime function that completely broke time parsing
+- **FIXED**: XCode crashes when accessing plugin settings (removed problematic settings schema)  
+- **FIXED**: Duplicate notifications for past events (improved time filtering with 5-minute tolerance)
+- **FIXED**: Plugin ID conflicts causing duplicate entries in plugin list
+- **FIXED**: Overly aggressive past event filtering that blocked current notifications
 
-### Improved
-- **Better notification context** - Messages now show timing context (e.g., "in 15 minutes", "OVERDUE")
-- **Smarter notification keys** - Support multiple reminders for the same block
-- **Weekend awareness** - Optional reduced frequency on weekends
+### 🔧 Stability Improvements
+- Simplified settings schema to prevent crashes (removed advanced settings temporarily)
+- Enhanced debug output for better troubleshooting
+- Session-only notification tracking (no persistent storage to avoid conflicts)
+- Improved time parsing with comprehensive error handling
+- Better block detection and processing logic
 
-### Settings Added
-- `enableAllDayReminders` - Toggle all-day block reminders
-- `allDayReminderTime` - Time for all-day reminders (default 9:00 AM)
-- `multipleReminders` - Enable multiple reminder intervals
-- `reminderIntervals` - Comma-separated intervals (default "15,5,0")
-- `weekendMode` - Quiet mode for weekends
-- `quietHoursStart` / `quietHoursEnd` - Define quiet hours
-- `notificationSound` - Control notification sounds
-- `overdueReminders` - Enable overdue notifications
-- `overdueInterval` - How often to remind about overdue items
-- `customNotificationPrefix` - Customize notification titles
+### ✅ Verified Working Features
+- Basic reminder notifications (desktop + in-app)
+- Scheduled block detection and parsing
+- Time-based notification triggering
+- Duplicate notification prevention
+- Past event filtering (blocks events older than 5 minutes)
+- Manual rescan via slash command
+
+### 🚫 Temporarily Disabled Features
+- Advanced settings UI (to prevent crashes)
+- Multiple reminder intervals
+- All-day reminders
+- Quiet hours
+- Overdue reminders
+- Custom notification prefixes
+
+## [1.2.1] - 2025-10-14 - DEBUGGING VERSION
+### Attempted Fixes (Partially Successful)
+- Removed persistent storage references
+- Simplified notification tracking
+- Improved past event filtering
+
+## [1.2.0] - 2025-10-14 - UNSTABLE (CRITICAL BUGS)
+### Added (But Buggy)
+- Multiple reminder intervals support (caused crashes)
+- All-day reminder support (caused parsing issues)
+- Quiet hours functionality (caused XCode crashes)
+- Weekend mode (caused settings conflicts)
+- Overdue reminder system (caused duplicate notifications)
+- Enhanced notification customization (caused crashes)
+- Comprehensive settings panel (caused XCode crashes)
+
+### Issues Discovered
+- Settings schema caused XCode crashes when accessed
+- Syntax errors broke core parsing functionality  
+- Overly complex features introduced instability
+- Persistent storage caused settings.json conflicts
+
+## [1.1.0] - 2025-10-14
 
 ## [1.1.0] - 2025-10-14
 
