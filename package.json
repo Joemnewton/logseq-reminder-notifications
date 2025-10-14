@@ -6,7 +6,7 @@
   "author": "Logseq Community",
   "license": "MIT",
   "logseq": {
-    "id": "logseq-reminder-notifications", 
+    "id": "logseq-reminder-plugin", 
     "title": "Reminder Notifications",
     "icon": "./icon.svg"
   }
