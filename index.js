@@ -20,8 +20,7 @@ function parseScheduledDateTime(text) {
   // Pattern 1: Journal-style timestamp <2025-10-14 Tue 14:30>
   const journalMatch = text.match(/<(\d{4}-\d{2}-\d{2})\s+\w+\s+(\d{1,2}:\d{2})>/);
   if (journalMatch) {
-    const [, datePart, timePart] = journalMatch;
-    return parseDateTime(datePart, timePart);
+    const [, datePart, timePart] = journ// Settings handling disabled for debuggingn parseDateTime(datePart, timePart);
   }
 
   // Pattern 2: Property value like "2025-10-14 14:30" or "2025-10-14T14:30"
@@ -90,11 +89,8 @@ function isWithinNext7Days(date) {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   const sevenDaysFromNow = new Date(startOfToday.getTime() + (7 * 24 * 60 * 60 * 1000));
   
-  // Only include reminders from today onwards, but not old past dates
-  // Allow some past time for today only (in case of delays)
-  const cutoffTime = new Date(now.getTime() - (2 * 60 * 60 * 1000)); // 2 hours ago
-  
-  return date >= cutoffTime && date <= sevenDaysFromNow;
+  // Only include reminders from now onwards - no past events at all
+  return date >= now && date <= sevenDaysFromNow;
 }
 
 /**
@@ -148,8 +144,8 @@ function getNotificationKey(uuid, scheduledDate, intervalMinutes = 0) {
  * @returns {number[]} - Array of reminder intervals in minutes
  */
 function getReminderIntervals() {
-  // Simplified - single reminder only
-  const leadTime = logseq.settings?.leadTimeMinutes || 0;
+  // Fixed single reminder - no settings dependency  
+  const leadTime = 0; // Fixed 0 minutes for debugging
   return [leadTime];
 }
 
@@ -198,7 +194,7 @@ function checkForAllDaySchedule(text) {
 function createAllDayReminderTime(date) {
   if (!date) return null;
 
-  const reminderHour = logseq.settings?.allDayReminderHour || 9;
+  const reminderHour = 9; // Fixed 9 AM for debugging
   const hours = Math.floor(reminderHour);
   const minutes = Math.round((reminderHour - hours) * 60);
 
@@ -259,7 +255,9 @@ let alreadyNotified = {}; // Session-local tracking to prevent duplicates
  * Main plugin initialization
  */
 function main() {
-  console.log('🔔 Reminder Notifications plugin starting...');
+  console.log('🔔 Reminder Notifications plugin v1.2.1-BUGFIX starting...');
+  console.log('🔧 Debug: Settings available:', Object.keys(logseq.settings || {}));
+  console.log('🔧 Debug: Using session-only notification tracking');
 
   // Request notification permission early
   requestNotificationPermission();
@@ -443,8 +441,8 @@ function parseBlockForReminder(block) {
     if (block.type === 'content') {
       scheduledTime = parseScheduledDateTime(block.content);
       
-      // Check for all-day format (date without time)
-      if (!scheduledTime && logseq.settings?.enableAllDayReminders) {
+      // Check for all-day format (date without time) - disabled for debugging
+      if (!scheduledTime && false) { // All-day reminders disabled
         isAllDay = checkForAllDaySchedule(block.content);
       }
     }
@@ -453,8 +451,8 @@ function parseBlockForReminder(block) {
     if (!scheduledTime && block.scheduledProperty) {
       scheduledTime = parseScheduledDateTime(block.scheduledProperty);
       
-      // Check for all-day property format
-      if (!scheduledTime && logseq.settings?.enableAllDayReminders) {
+      // Check for all-day property format - disabled for debugging  
+      if (!scheduledTime && false) { // All-day reminders disabled
         isAllDay = checkForAllDaySchedule(block.scheduledProperty);
       }
     }
@@ -504,7 +502,7 @@ function setupPolling() {
     clearInterval(window.periodicRescanInterval);
   }
 
-  const intervalSeconds = logseq.settings?.pollIntervalSeconds || 30;
+  const intervalSeconds = 30; // Fixed interval for debugging
   console.log(`⏱️ Setting up polling every ${intervalSeconds} seconds`);
 
   // Check for due reminders
@@ -538,10 +536,11 @@ async function checkForDueReminders() {
       const notificationKey = getNotificationKey(reminder.uuid, reminder.when, intervalMinutes);
       const alreadySent = alreadyNotified[notificationKey];
       
-      // Skip notifications for events more than 1 hour in the past
+      // Skip notifications for ANY past events
       const now = new Date();
-      const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
-      const isSignificantlyPast = reminder.when < oneHourAgo;
+      const isPastEvent = reminder.when < now;
+      
+      console.log(`🔧 Debug times: now=${now.toLocaleTimeString()}, reminder=${reminder.when.toLocaleTimeString()}, isPast=${isPastEvent}`);
       
       console.log(`  📋 "${reminder.content.substring(0, 30)}..." scheduled for ${formatDateTimeForNotification(reminder.when)}`);
       console.log(`     - Time to notify? ${isTimeForThis} (${intervalMinutes}min before)`);
@@ -549,7 +548,7 @@ async function checkForDueReminders() {
       console.log(`     - Significantly past? ${isSignificantlyPast}`);
       console.log(`     - Notification key: ${notificationKey}`);
       
-      if (isTimeForThis && !isSignificantlyPast) {
+      if (isTimeForThis && !isPastEvent) {
         if (notificationKey && !alreadySent) {
           // Send notification
           try {
