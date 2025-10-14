@@ -13,14 +13,19 @@
  * @returns {Date|null} - Parsed date or null if invalid/no time
  */
 function parseScheduledDateTime(text) {
+  console.log(`    🔍 parseScheduledDateTime called with: "${text}"`);
   if (!text || typeof text !== 'string') {
+    console.log(`    ❌ Invalid input: ${typeof text}`);
     return null;
   }
 
   // Pattern 1: Journal-style timestamp <2025-10-14 Tue 14:30>
   const journalMatch = text.match(/<(\d{4}-\d{2}-\d{2})\s+\w+\s+(\d{1,2}:\d{2})>/);
+  console.log(`    🔍 Journal pattern match: ${journalMatch ? 'found' : 'not found'}`);
   if (journalMatch) {
-    const [, datePart, timePart] = journ// Settings handling disabled for debuggingn parseDateTime(datePart, timePart);
+    const [, datePart, timePart] = journalMatch;
+    console.log(`    ✅ Journal match - date: ${datePart}, time: ${timePart}`);
+    return parseDateTime(datePart, timePart);
   }
 
   // Pattern 2: Property value like "2025-10-14 14:30" or "2025-10-14T14:30"
@@ -435,12 +440,18 @@ async function findBlocksWithScheduledProperty() {
  */
 function parseBlockForReminder(block) {
   try {
+    console.log(`  🔍 parseBlockForReminder - Block type: ${block.type}, UUID: ${block.uuid}`);
+    console.log(`  🔍 Content: "${block.content?.substring(0, 100) || 'none'}"`);
+    console.log(`  🔍 Scheduled property: "${block.scheduledProperty || 'none'}"`);
+    
     let scheduledTime = null;
     let isAllDay = false;
     
     // Try to parse from content first (SCHEDULED: format)
     if (block.type === 'content') {
+      console.log(`  🔍 Parsing from content...`);
       scheduledTime = parseScheduledDateTime(block.content);
+      console.log(`  🔍 Result from content: ${scheduledTime ? scheduledTime.toLocaleString() : 'null'}`);
       
       // Check for all-day format (date without time) - disabled for debugging
       if (!scheduledTime && false) { // All-day reminders disabled
@@ -450,7 +461,9 @@ function parseBlockForReminder(block) {
     
     // Try to parse from property if content parsing failed or this is a property block
     if (!scheduledTime && block.scheduledProperty) {
+      console.log(`  🔍 Parsing from property...`);
       scheduledTime = parseScheduledDateTime(block.scheduledProperty);
+      console.log(`  🔍 Result from property: ${scheduledTime ? scheduledTime.toLocaleString() : 'null'}`);
       
       // Check for all-day property format - disabled for debugging  
       if (!scheduledTime && false) { // All-day reminders disabled
