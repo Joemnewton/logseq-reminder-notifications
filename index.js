@@ -89,8 +89,9 @@ function isWithinNext7Days(date) {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   const sevenDaysFromNow = new Date(startOfToday.getTime() + (7 * 24 * 60 * 60 * 1000));
   
-  // Only include reminders from now onwards - no past events at all
-  return date >= now && date <= sevenDaysFromNow;
+  // Allow a small tolerance (5 minutes) for "right now" notifications but block old past events
+  const fiveMinutesAgo = new Date(now.getTime() - (5 * 60 * 1000));
+  return date >= fiveMinutesAgo && date <= sevenDaysFromNow;
 }
 
 /**
@@ -525,6 +526,10 @@ async function checkForDueReminders() {
   
   console.log(`⏰ Checking reminders at ${now.toLocaleTimeString()} - Found ${upcomingReminders.length} upcoming reminders`);
   
+  if (upcomingReminders.length === 0) {
+    console.log('🔍 No upcoming reminders found. Try running "/reminders: rescan" to refresh the list.');
+  }
+  
   let hasNewNotifications = false;
 
   for (const reminder of upcomingReminders) {
@@ -536,11 +541,12 @@ async function checkForDueReminders() {
       const notificationKey = getNotificationKey(reminder.uuid, reminder.when, intervalMinutes);
       const alreadySent = alreadyNotified[notificationKey];
       
-      // Skip notifications for ANY past events
+      // Skip notifications for significantly past events (but allow small delays)
       const now = new Date();
-      const isPastEvent = reminder.when < now;
+      const fiveMinutesAgo = new Date(now.getTime() - (5 * 60 * 1000));
+      const isSignificantlyPast = reminder.when < fiveMinutesAgo;
       
-      console.log(`🔧 Debug times: now=${now.toLocaleTimeString()}, reminder=${reminder.when.toLocaleTimeString()}, isPast=${isPastEvent}`);
+      console.log(`🔧 Debug times: now=${now.toLocaleTimeString()}, reminder=${reminder.when.toLocaleTimeString()}, significantlyPast=${isSignificantlyPast}`);
       
       console.log(`  📋 "${reminder.content.substring(0, 30)}..." scheduled for ${formatDateTimeForNotification(reminder.when)}`);
       console.log(`     - Time to notify? ${isTimeForThis} (${intervalMinutes}min before)`);
@@ -548,7 +554,7 @@ async function checkForDueReminders() {
       console.log(`     - Significantly past? ${isSignificantlyPast}`);
       console.log(`     - Notification key: ${notificationKey}`);
       
-      if (isTimeForThis && !isPastEvent) {
+      if (isTimeForThis && !isSignificantlyPast) {
         if (notificationKey && !alreadySent) {
           // Send notification
           try {
