@@ -176,11 +176,26 @@ function main() {
     logseq.App.showMsg('Reminders rescanned!', 'success');
   });
 
+  // Register keyboard shortcut for quick rescan
+  logseq.App.registerCommandPalette({
+    key: 'rescan-reminders',
+    label: 'Rescan for scheduled reminders',
+    keybinding: {
+      mode: 'global',
+      binding: 'mod+shift+r'
+    }
+  }, async () => {
+    console.log('📋 Manual rescan triggered via keyboard shortcut');
+    await scanForUpcomingReminders();
+    logseq.App.showMsg('Reminders rescanned!', 'success');
+  });
+
   // Initial scan and setup - will be called when logseq.ready() fires
   console.log('📊 Logseq ready, starting initial scan...');
   scanForUpcomingReminders();
   setupPolling();
   scheduleDailyRescan();
+  setupBlockChangeListeners();
   
   console.log('✅ Reminder Notifications plugin loaded');
 }
@@ -367,20 +382,30 @@ function parseBlockForReminder(block) {
 }
 
 /**
- * Setup polling to check for due reminders
+ * Setup polling to check for due reminders and periodic rescanning
  */
 function setupPolling() {
-  // Clear existing interval
+  // Clear existing intervals
   if (pollInterval) {
     clearInterval(pollInterval);
+  }
+  if (window.periodicRescanInterval) {
+    clearInterval(window.periodicRescanInterval);
   }
 
   const intervalSeconds = logseq.settings?.pollIntervalSeconds || 30;
   console.log(`⏱️ Setting up polling every ${intervalSeconds} seconds`);
 
-  pollInterval = setInterval(() => {
-    checkForDueReminders();
+  // Check for due reminders
+  pollInterval = setInterval(async () => {
+    await checkForDueReminders();
   }, intervalSeconds * 1000);
+
+  // Periodic rescan every 2 minutes to catch new scheduled blocks
+  window.periodicRescanInterval = setInterval(async () => {
+    console.log('🔄 Periodic rescan (every 2 minutes)...');
+    await scanForUpcomingReminders();
+  }, 2 * 60 * 1000); // 2 minutes
 }
 
 /**
@@ -571,6 +596,18 @@ logseq.onSettingsChanged((newSettings, oldSettings) => {
 });
 
 /**
+ * Setup listeners for block changes to auto-detect new scheduled blocks
+ */
+function setupBlockChangeListeners() {
+  console.log('👂 Setting up safe block change detection (periodic only)...');
+  
+  // DISABLED: Database listeners cause UI interference
+  // Instead, we'll rely on periodic scanning and manual rescans
+  
+  console.log('✅ Using periodic scanning only to avoid UI issues');
+}
+
+/**
  * Cleanup on plugin unload
  */
 logseq.beforeunload(() => {
@@ -580,8 +617,21 @@ logseq.beforeunload(() => {
     clearInterval(pollInterval);
   }
   
+  if (window.periodicRescanInterval) {
+    clearInterval(window.periodicRescanInterval);
+  }
+  
   if (dailyRescanTimeout) {
     clearTimeout(dailyRescanTimeout);
+  }
+  
+  // Clear any pending rescans
+  if (window.scheduleRescanTimeout) {
+    clearTimeout(window.scheduleRescanTimeout);
+  }
+  
+  if (window.pageChangeRescanTimeout) {
+    clearTimeout(window.pageChangeRescanTimeout);
   }
 });
 

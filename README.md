@@ -2,7 +2,7 @@
 
 A powerful Logseq plugin that provides desktop notifications and in-app alerts for scheduled blocks. Never miss your scheduled tasks and reminders again!
 
-![Plugin Demo](https://img.shields.io/badge/Logseq-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.0.0-green) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Plugin Demo](https://img.shields.io/badge/Logseq-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.0-green) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## 🎯 Perfect for
 - **GTD practitioners** who schedule specific review times
@@ -15,10 +15,12 @@ A powerful Logseq plugin that provides desktop notifications and in-app alerts f
 - 🔔 **Dual Notifications**: Both desktop notifications and Logseq in-app messages
 - 📅 **Flexible Scheduling**: Supports both `SCHEDULED: <timestamp>` format and `scheduled:: property` format
 - ⏰ **Time Parsing**: Handles various time formats including `<2025-10-14 Tue 14:30>` and `2025-10-14 14:30`
-- 🔄 **Automatic Scanning**: Daily rescans and real-time monitoring of scheduled blocks
+- � **Automatic Detection**: Automatically finds new scheduled blocks every 2 minutes - no manual rescanning needed!
+- ⚡ **Quick Rescan**: Use `Cmd+Shift+R` or `/reminders: rescan` for immediate detection
 - ⚙️ **Configurable Settings**: Customize lead time, check intervals, and rescan schedule
 - 🚫 **Duplicate Prevention**: Prevents multiple notifications for the same scheduled block
 - 🎯 **Smart Filtering**: Only shows reminders with specific times (ignores date-only schedules)
+- 🛡️ **Non-intrusive**: Won't interfere with your typing or editing experience
 
 ## Installation
 
@@ -91,16 +93,18 @@ The plugin recognizes scheduled blocks in these formats:
    ```
    (Replace with current date and a time 2-3 minutes from now)
 
-2. **Enable desktop notifications** when prompted by your browser
+2. **Enable desktop notifications** when prompted by Logseq
 
-3. **Wait for notification** - the plugin checks every 30 seconds by default
+3. **Wait for automatic detection** - the plugin scans every 2 minutes automatically
 
-#### Manual Rescan
+4. **Get notified** - you'll receive both desktop and in-app notifications at the scheduled time!
 
-Use the slash command to manually trigger a rescan:
-1. Type `/reminders: rescan` in any block
-2. Press Enter to execute
-3. Check the console (F12) for scan results
+#### Manual Control Options
+
+**If you want immediate detection:**
+- **Keyboard shortcut**: Press `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows/Linux)
+- **Slash command**: Type `/reminders: rescan` in any block and press Enter
+- **Check console**: Open Developer Tools (F12) → Console tab for detailed logs
 
 ### Configuration
 

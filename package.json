@@ -1,6 +1,6 @@
 {
   "name": "logseq-reminder-plugin",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Desktop and in-app notifications for scheduled blocks in Logseq",
   "main": "index.js",
   "author": "Logseq Community",
