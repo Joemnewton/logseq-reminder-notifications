@@ -253,6 +253,7 @@ function isInQuietHours(now) {
 let upcomingReminders = [];
 let pollInterval = null;
 let dailyRescanTimeout = null;
+let alreadyNotified = {}; // Session-local tracking to prevent duplicates
 
 /**
  * Main plugin initialization
@@ -522,7 +523,6 @@ function setupPolling() {
  * Check if any reminders are due and send notifications
  */
 async function checkForDueReminders() {
-  const alreadyNotified = {}; // Use local tracking per session 
   const now = new Date();
   
   console.log(`⏰ Checking reminders at ${now.toLocaleTimeString()} - Found ${upcomingReminders.length} upcoming reminders`);
@@ -538,12 +538,18 @@ async function checkForDueReminders() {
       const notificationKey = getNotificationKey(reminder.uuid, reminder.when, intervalMinutes);
       const alreadySent = alreadyNotified[notificationKey];
       
+      // Skip notifications for events more than 1 hour in the past
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
+      const isSignificantlyPast = reminder.when < oneHourAgo;
+      
       console.log(`  📋 "${reminder.content.substring(0, 30)}..." scheduled for ${formatDateTimeForNotification(reminder.when)}`);
       console.log(`     - Time to notify? ${isTimeForThis} (${intervalMinutes}min before)`);
       console.log(`     - Already notified? ${!!alreadySent}`);
+      console.log(`     - Significantly past? ${isSignificantlyPast}`);
       console.log(`     - Notification key: ${notificationKey}`);
       
-      if (isTimeForThis) {
+      if (isTimeForThis && !isSignificantlyPast) {
         if (notificationKey && !alreadySent) {
           // Send notification
           try {
@@ -570,13 +576,8 @@ async function checkForDueReminders() {
   // Overdue reminders temporarily disabled to prevent duplicate notifications
   // TODO: Re-implement with better logic
 
-  // Save updated notification status
-  if (hasNewNotifications) {
-    logseq.updateSettings({ alreadyNotified });
-    
-    // Clean up old notification records (older than 30 days)
-    cleanupOldNotificationRecords();
-  }
+  // Note: No longer saving notification status to persistent storage
+  // This prevents XCode from opening settings.json files
 }
 
 /**
@@ -689,25 +690,21 @@ function scheduleDailyRescan() {
  */
 function cleanupOldNotificationRecords() {
   try {
-    // Skip cleanup since we're using session-local tracking now
-    return;
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const cleanedRecords = {};
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
     let removedCount = 0;
-
-    for (const [key, timestamp] of Object.entries(alreadyNotified)) {
-      const recordDate = new Date(timestamp);
-      if (recordDate >= thirtyDaysAgo) {
-        cleanedRecords[key] = timestamp;
-      } else {
+    
+    // Remove entries for notifications older than 1 hour
+    for (const [key, timestampStr] of Object.entries(alreadyNotified)) {
+      const timestamp = new Date(timestampStr);
+      if (timestamp < oneHourAgo) {
+        delete alreadyNotified[key];
         removedCount++;
       }
     }
-
+    
     if (removedCount > 0) {
-      console.log(`🧹 Cleaned up ${removedCount} old notification records`);
-      logseq.updateSettings({ alreadyNotified: cleanedRecords });
+      console.log(`🧹 Cleaned up ${removedCount} old notification records from session`);
     }
   } catch (error) {
     console.error('❌ Error cleaning up notification records:', error);
