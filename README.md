@@ -1,8 +1,22 @@
-# 🔔 Logseq Reminder Notifications Plugin
+# 🔔 Logseq ## Features
+
+- 🔔 **Dual Notifications**: Both desktop notifications and Logseq in-app messages
+- 📅 **Flexible Scheduling**: Supports both `SCHEDULED: <timestamp>` format and `scheduled:: property` format
+- ⏰ **Time Parsing**: Handles various time formats including `<2025-10-14 Tue 14:30>` and `2025-10-14 14:30`
+- 🚀 **Automatic Detection**: Automatically finds new scheduled blocks every 2 minutes - no manual rescanning needed!
+- ⚡ **Quick Rescan**: Use `Cmd+Shift+R` or `/reminders: rescan` for immediate detection
+- 📆 **All-Day Support**: Get reminders for date-only blocks (e.g., `<2025-10-14>`) at a configurable time
+- 🔢 **Multiple Reminders**: Set multiple alerts (e.g., 1 hour, 30 min, 15 min, 5 min before)
+- 🌙 **Quiet Hours**: Disable notifications during sleep/focus hours (e.g., 10 PM - 7 AM)
+- ⏰ **Overdue Alerts**: Keep getting reminded about missed scheduled items
+- 🎨 **Customizable**: Custom notification prefixes, sound control, weekend modes
+- ⚙️ **Highly Configurable**: 12+ settings for personalized reminder experience
+- 🚫 **Duplicate Prevention**: Prevents multiple notifications for the same scheduled block
+- 🛡️ **Non-intrusive**: Won't interfere with your typing or editing experiencetifications Plugin
 
 A powerful Logseq plugin that provides desktop notifications and in-app alerts for scheduled blocks. Never miss your scheduled tasks and reminders again!
 
-![Plugin Demo](https://img.shields.io/badge/Logseq-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.0-green) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Plugin Demo](https://img.shields.io/badge/Logseq-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.2.0-green) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## 🎯 Perfect for
 - **GTD practitioners** who schedule specific review times
@@ -110,9 +124,30 @@ The plugin recognizes scheduled blocks in these formats:
 
 Access plugin settings via **Settings** → **Plugins** → **Reminder Notifications**:
 
-- **Lead Time (minutes)**: Show notifications X minutes before scheduled time (default: 0)
+#### ⏰ **Basic Timing**
+- **Lead Time (minutes)**: Show notifications X minutes before scheduled time (default: 0, max: 120)
 - **Check Interval (seconds)**: How often to check for due reminders (default: 30, range: 10-300)
 - **Daily Rescan Hour**: Hour of day for automatic rescan in 24h format (default: 3, range: 0-23)
+
+#### 📅 **All-Day Reminders**
+- **Enable All-Day Block Reminders**: Get notified for blocks like `SCHEDULED: <2025-10-14>` (default: off)
+- **All-Day Reminder Time**: When to remind for all-day blocks (default: 9:00 AM, supports 15-min intervals)
+
+#### 🔢 **Multiple Reminders**
+- **Enable Multiple Reminders**: Get notified at multiple intervals before scheduled time
+- **Reminder Intervals**: Comma-separated minutes before (default: "15,5,0" = 15 min, 5 min, and on-time)
+
+#### 🌙 **Quiet Hours & Modes**
+- **Weekend Quiet Mode**: Reduce reminder frequency on weekends
+- **Quiet Hours Start/End**: No notifications during these hours (default: 10 PM - 7 AM)
+
+#### ⏰ **Overdue Management**
+- **Enable Overdue Reminders**: Keep reminding about missed scheduled items
+- **Overdue Reminder Interval**: How often to remind about overdue items (default: 60 min)
+
+#### 🎨 **Customization**
+- **Notification Title Prefix**: Customize notification titles (default: "📅 Reminder")
+- **Enable Notification Sound**: Play sound with notifications (default: on)
 
 ### Console Logging
 

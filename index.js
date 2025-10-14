@@ -77,7 +77,7 @@ function parseDateTime(datePart, timePart) {
 }
 
 /**
- * Check if a date is within the next 7 days from now (including today from start of day)
+ * Check if a date is within the next 7 days from now (including recent past for current day only)
  * @param {Date} date - The date to check
  * @returns {boolean} - True if within next 7 days
  */
@@ -90,8 +90,11 @@ function isWithinNext7Days(date) {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   const sevenDaysFromNow = new Date(startOfToday.getTime() + (7 * 24 * 60 * 60 * 1000));
   
-  // Include reminders from start of today through next 7 days
-  return date >= startOfToday && date <= sevenDaysFromNow;
+  // Only include reminders from today onwards, but not old past dates
+  // Allow some past time for today only (in case of delays)
+  const cutoffTime = new Date(now.getTime() - (2 * 60 * 60 * 1000)); // 2 hours ago
+  
+  return date >= cutoffTime && date <= sevenDaysFromNow;
 }
 
 /**
@@ -126,16 +129,80 @@ function formatDateTimeForNotification(date) {
  * Generate a unique key for tracking notifications
  * @param {string} uuid - Block UUID
  * @param {Date} scheduledDate - The scheduled date
+ * @param {number} intervalMinutes - Minutes before scheduled time
  * @returns {string} - Unique key for this notification
  */
-function getNotificationKey(uuid, scheduledDate) {
+function getNotificationKey(uuid, scheduledDate, intervalMinutes = 0) {
   if (!uuid || !scheduledDate) {
     return null;
   }
   
-  // Use date portion only to avoid multiple notifications for same block on same day
+  // Include interval in key to allow multiple reminders for same block
   const dateStr = scheduledDate.toLocaleDateString();
-  return `${uuid}_${dateStr}`;
+  const timeStr = scheduledDate.toLocaleTimeString();
+  return `${uuid}_${dateStr}_${timeStr}_${intervalMinutes}min`;
+}
+
+/**
+ * Get reminder intervals from settings
+ * @returns {number[]} - Array of reminder intervals in minutes
+ */
+function getReminderIntervals() {
+  // Simplified - single reminder only
+  const leadTime = logseq.settings?.leadTimeMinutes || 0;
+  return [leadTime];
+}
+
+/**
+ * Check for overdue reminders - TEMPORARILY DISABLED
+ * Function disabled to prevent duplicate notifications during testing
+ */
+// async function checkOverdueReminder(reminder, alreadyNotified) {
+//   return false; // Always return false to skip overdue processing
+// }
+
+/**
+ * Check for all-day schedule format (date without time)
+ * @param {string} text - The text to check
+ * @returns {Date|null} - Date if all-day format found, null otherwise
+ */
+function checkForAllDaySchedule(text) {
+  if (!text || typeof text !== 'string') {
+    return null;
+  }
+
+  // Pattern: <2025-10-14> or <2025-10-14 Mon> without time
+  const allDayMatch = text.match(/<(\d{4}-\d{2}-\d{2})(?:\s+\w+)?>/);
+  if (allDayMatch) {
+    const [, datePart] = allDayMatch;
+    const [year, month, day] = datePart.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  // Pattern: property value like "2025-10-14" without time
+  const propertyMatch = text.match(/^(\d{4}-\d{2}-\d{2})$/);
+  if (propertyMatch) {
+    const [, datePart] = propertyMatch;
+    const [year, month, day] = datePart.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  return null;
+}
+
+/**
+ * Create all-day reminder time based on settings
+ * @param {Date} date - The date for the all-day reminder
+ * @returns {Date} - Date with configured all-day reminder time
+ */
+function createAllDayReminderTime(date) {
+  if (!date) return null;
+
+  const reminderHour = logseq.settings?.allDayReminderHour || 9;
+  const hours = Math.floor(reminderHour);
+  const minutes = Math.round((reminderHour - hours) * 60);
+
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0, 0);
 }
 
 /**
@@ -150,9 +217,36 @@ function isTimeToNotify(scheduledTime, leadTimeMinutes = 0) {
   }
 
   const now = new Date();
+  
+  // Check quiet hours
+  if (isInQuietHours(now)) {
+    return false;
+  }
+
   const notifyTime = new Date(scheduledTime.getTime() - (leadTimeMinutes * 60 * 1000));
   
   return now >= notifyTime;
+}
+
+/**
+ * Check if current time is within quiet hours
+ * @param {Date} now - Current time
+ * @returns {boolean} - True if in quiet hours
+ */
+function isInQuietHours(now) {
+  // Quiet hours temporarily disabled
+  const quietStart = 22; // 10 PM
+  const quietEnd = 7;    // 7 AM
+  const currentHour = now.getHours();
+
+  // Handle overnight quiet hours (e.g., 22 to 7)
+  if (quietStart > quietEnd) {
+    return currentHour >= quietStart || currentHour < quietEnd;
+  }
+  // Handle same-day quiet hours (e.g., 13 to 15)
+  else {
+    return currentHour >= quietStart && currentHour < quietEnd;
+  }
 }
 
 // Global state
@@ -342,15 +436,31 @@ async function findBlocksWithScheduledProperty() {
 function parseBlockForReminder(block) {
   try {
     let scheduledTime = null;
+    let isAllDay = false;
     
     // Try to parse from content first (SCHEDULED: format)
     if (block.type === 'content') {
       scheduledTime = parseScheduledDateTime(block.content);
+      
+      // Check for all-day format (date without time)
+      if (!scheduledTime && logseq.settings?.enableAllDayReminders) {
+        isAllDay = checkForAllDaySchedule(block.content);
+      }
     }
     
     // Try to parse from property if content parsing failed or this is a property block
     if (!scheduledTime && block.scheduledProperty) {
       scheduledTime = parseScheduledDateTime(block.scheduledProperty);
+      
+      // Check for all-day property format
+      if (!scheduledTime && logseq.settings?.enableAllDayReminders) {
+        isAllDay = checkForAllDaySchedule(block.scheduledProperty);
+      }
+    }
+    
+    // Handle all-day reminders
+    if (isAllDay) {
+      scheduledTime = createAllDayReminderTime(isAllDay);
     }
     
     if (!scheduledTime) {
@@ -412,8 +522,7 @@ function setupPolling() {
  * Check if any reminders are due and send notifications
  */
 async function checkForDueReminders() {
-  const leadTimeMinutes = logseq.settings?.leadTimeMinutes || 0;
-  const alreadyNotified = logseq.settings?.alreadyNotified || {};
+  const alreadyNotified = {}; // Use local tracking per session 
   const now = new Date();
   
   console.log(`⏰ Checking reminders at ${now.toLocaleTimeString()} - Found ${upcomingReminders.length} upcoming reminders`);
@@ -421,34 +530,45 @@ async function checkForDueReminders() {
   let hasNewNotifications = false;
 
   for (const reminder of upcomingReminders) {
-    const isTimeForThis = isTimeToNotify(reminder.when, leadTimeMinutes);
-    const notificationKey = getNotificationKey(reminder.uuid, reminder.when);
-    const alreadySent = alreadyNotified[notificationKey];
+    // Handle multiple reminder intervals if enabled
+    const reminderIntervals = getReminderIntervals();
     
-    console.log(`  📋 "${reminder.content.substring(0, 30)}..." scheduled for ${formatDateTimeForNotification(reminder.when)}`);
-    console.log(`     - Time to notify? ${isTimeForThis} (lead time: ${leadTimeMinutes}min)`);
-    console.log(`     - Already notified? ${!!alreadySent}`);
-    console.log(`     - Notification key: ${notificationKey}`);
-    
-    if (isTimeForThis) {
-      if (notificationKey && !alreadySent) {
-        // Send notification
-        try {
-          await sendNotification(reminder);
-          
-          // Mark as notified
-          alreadyNotified[notificationKey] = new Date().toISOString();
-          hasNewNotifications = true;
-          
-          console.log(`🔔 Notification sent for: ${reminder.content.substring(0, 50)}...`);
-        } catch (error) {
-          console.error('❌ Error in sendNotification:', error);
+    for (const intervalMinutes of reminderIntervals) {
+      const isTimeForThis = isTimeToNotify(reminder.when, intervalMinutes);
+      const notificationKey = getNotificationKey(reminder.uuid, reminder.when, intervalMinutes);
+      const alreadySent = alreadyNotified[notificationKey];
+      
+      console.log(`  📋 "${reminder.content.substring(0, 30)}..." scheduled for ${formatDateTimeForNotification(reminder.when)}`);
+      console.log(`     - Time to notify? ${isTimeForThis} (${intervalMinutes}min before)`);
+      console.log(`     - Already notified? ${!!alreadySent}`);
+      console.log(`     - Notification key: ${notificationKey}`);
+      
+      if (isTimeForThis) {
+        if (notificationKey && !alreadySent) {
+          // Send notification
+          try {
+            await sendNotification(reminder, intervalMinutes);
+            
+            // Mark as notified
+            alreadyNotified[notificationKey] = new Date().toISOString();
+            hasNewNotifications = true;
+            
+            console.log(`🔔 Notification sent for: ${reminder.content.substring(0, 50)}... (${intervalMinutes}min before)`);
+          } catch (error) {
+            console.error('❌ Error in sendNotification:', error);
+          }
+        } else {
+          console.log(`⚠️ Skipping notification (already sent or invalid key)`);
         }
-      } else {
-        console.log(`⚠️ Skipping notification (already sent or invalid key)`);
       }
     }
+    
+    // Check for overdue reminders (but don't double-process)
+    // This is handled separately to avoid duplicate processing
   }
+
+  // Overdue reminders temporarily disabled to prevent duplicate notifications
+  // TODO: Re-implement with better logic
 
   // Save updated notification status
   if (hasNewNotifications) {
@@ -462,10 +582,22 @@ async function checkForDueReminders() {
 /**
  * Send both desktop and Logseq notifications
  */
-async function sendNotification(reminder) {
+async function sendNotification(reminder, intervalMinutes = 0, isOverdue = false) {
   const timeStr = formatDateTimeForNotification(reminder.when);
-  const title = `📅 Reminder: ${reminder.page}`;
-  const message = `${reminder.content}\n\nScheduled for: ${timeStr}`;
+  const customPrefix = '📅 Reminder'; // Fixed prefix for simplicity
+  
+  let title = `${customPrefix}: ${reminder.page}`;
+  let message = reminder.content;
+  
+  // Customize message based on timing
+  if (isOverdue) {
+    title = `⏰ OVERDUE: ${reminder.page}`;
+    message += `\n\n⚠️ This was scheduled for: ${timeStr}`;
+  } else if (intervalMinutes > 0) {
+    message += `\n\n🕐 Scheduled for: ${timeStr} (in ${intervalMinutes} minutes)`;
+  } else {
+    message += `\n\n🎯 Scheduled for: ${timeStr}`;
+  }
 
   try {
     console.log('📢 Sending notifications...');
@@ -473,7 +605,8 @@ async function sendNotification(reminder) {
     // Logseq in-app notification
     console.log('📱 Sending Logseq in-app notification:', message);
     try {
-      await logseq.App.showMsg(message, 'info', { timeout: 8000 });
+      const notificationType = isOverdue ? 'warning' : 'info';
+      await logseq.App.showMsg(message, notificationType, { timeout: 8000 });
       console.log('✅ Logseq notification sent successfully');
     } catch (error) {
       console.error('❌ Failed to send Logseq notification:', error);
@@ -491,19 +624,24 @@ async function sendNotification(reminder) {
     
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       console.log('🖥️ Creating desktop notification');
-      const notification = new Notification(title, {
-        body: `${reminder.content}\n\nScheduled for: ${timeStr}`,
+      
+      const notificationOptions = {
+        body: message,
         icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDMTMuMSAyIDE0IDIuOSAxNCA0VjVIMTZDMTcuMSA1IDE4IDUuOSAxOCA3VjE5QzE4IDIwLjEgMTcuMSAyMSAxNiAyMUg4QzYuOSAyMSA2IDIwLjEgNiAxOVY3QzYgNS45IDYuOSA1IDggNUgxMFY0QzEwIDIuOSAxMC45IDIgMTIgMlpNMTIgNEMxMS40IDQgMTEgNC40IDExIDVIMTNDMTMgNC40IDEyLjYgNCAxMiA0Wk0xNiA3SDhWMTlIMTZWN1oiIGZpbGw9IiMzMzMiLz4KPC9zdmc+Cg==',
-        tag: reminder.uuid,
-        requireInteraction: true
-      });
+        tag: `${reminder.uuid}_${intervalMinutes}`,
+        requireInteraction: isOverdue, // Overdue notifications require interaction
+        silent: false // Always allow notification sound
+      };
+      
+      const notification = new Notification(title, notificationOptions);
       
       console.log('✅ Desktop notification created');
 
-      // Auto-close notification after 10 seconds
+      // Auto-close notification (longer for overdue)
+      const timeout = isOverdue ? 30000 : 10000;
       setTimeout(() => {
         notification.close();
-      }, 10000);
+      }, timeout);
 
     } else if (typeof Notification !== 'undefined') {
       console.warn('⚠️ Desktop notifications not permitted. Current permission:', Notification.permission);
@@ -524,7 +662,7 @@ function scheduleDailyRescan() {
     clearTimeout(dailyRescanTimeout);
   }
 
-  const rescanHour = logseq.settings?.dailyRescanHour || 3;
+  const rescanHour = 3; // Fixed 3 AM rescan for simplicity
   const now = new Date();
   const nextRescan = new Date();
   
@@ -551,8 +689,8 @@ function scheduleDailyRescan() {
  */
 function cleanupOldNotificationRecords() {
   try {
-    const alreadyNotified = logseq.settings?.alreadyNotified || {};
-    const thirtyDaysAgo = new Date();
+    // Skip cleanup since we're using session-local tracking now
+    return;
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const cleanedRecords = {};

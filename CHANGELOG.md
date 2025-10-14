@@ -5,6 +5,36 @@ All notable changes to the Logseq Reminder Notifications plugin will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-10-14
+
+### Added
+- **All-day reminders** - Enable notifications for blocks scheduled without specific times (e.g., `SCHEDULED: <2025-10-14>`)
+- **Configurable all-day time** - Set default reminder time for all-day blocks (default 9:00 AM)
+- **Multiple reminder intervals** - Get reminded at multiple times before scheduled events (e.g., 60, 30, 15, 5 minutes before)
+- **Quiet hours** - Disable notifications during specified hours (default 10 PM - 7 AM)
+- **Weekend mode** - Reduce reminder frequency on weekends
+- **Overdue reminders** - Continue getting reminded about missed scheduled items
+- **Custom notification prefixes** - Personalize notification titles
+- **Notification sound control** - Enable/disable notification sounds
+- **Enhanced lead time** - Extended maximum lead time to 2 hours
+
+### Improved
+- **Better notification context** - Messages now show timing context (e.g., "in 15 minutes", "OVERDUE")
+- **Smarter notification keys** - Support multiple reminders for the same block
+- **Weekend awareness** - Optional reduced frequency on weekends
+
+### Settings Added
+- `enableAllDayReminders` - Toggle all-day block reminders
+- `allDayReminderTime` - Time for all-day reminders (default 9:00 AM)
+- `multipleReminders` - Enable multiple reminder intervals
+- `reminderIntervals` - Comma-separated intervals (default "15,5,0")
+- `weekendMode` - Quiet mode for weekends
+- `quietHoursStart` / `quietHoursEnd` - Define quiet hours
+- `notificationSound` - Control notification sounds
+- `overdueReminders` - Enable overdue notifications
+- `overdueInterval` - How often to remind about overdue items
+- `customNotificationPrefix` - Customize notification titles
+
 ## [1.1.0] - 2025-10-14
 
 ### Added

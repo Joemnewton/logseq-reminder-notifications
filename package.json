@@ -1,6 +1,6 @@
 {
   "name": "logseq-reminder-plugin",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Desktop and in-app notifications for scheduled blocks in Logseq",
   "main": "index.js",
   "author": "Logseq Community",
@@ -14,31 +14,25 @@
         "title": "Lead Time (minutes)",
         "description": "How many minutes before scheduled time to show notification",
         "type": "number",
-        "default": 0,
-        "minimum": 0,
-        "maximum": 60
+        "default": 0
       },
       "pollIntervalSeconds": {
         "title": "Check Interval (seconds)",
         "description": "How often to check for due reminders", 
         "type": "number",
-        "default": 30,
-        "minimum": 10,
-        "maximum": 300
+        "default": 30
       },
-      "dailyRescanHour": {
-        "title": "Daily Rescan Hour (24h format)",
-        "description": "Hour of day to automatically rescan for new scheduled blocks",
-        "type": "number", 
-        "default": 3,
-        "minimum": 0,
-        "maximum": 23
+      "enableAllDayReminders": {
+        "title": "Enable All-Day Block Reminders",
+        "description": "Show reminders for blocks scheduled without specific times",
+        "type": "boolean",
+        "default": false
       },
-      "alreadyNotified": {
-        "title": "Internal: Already Notified",
-        "description": "Internal storage for preventing duplicate notifications",
-        "type": "object",
-        "default": {}
+      "allDayReminderHour": {
+        "title": "All-Day Reminder Hour (0-23)",
+        "description": "What hour to remind for all-day scheduled blocks (9 = 9 AM)",
+        "type": "number",
+        "default": 9
       }
     }
   }
