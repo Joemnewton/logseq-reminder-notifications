@@ -1,8 +1,8 @@
 # Logseq Reminder Notifications Plugin
 
-**v1.2.2 - STABLE RELEASE** 🚀
+**v1.3.0 - FEATURE RELEASE** 🚀
 
-![Plugin Demo](https://img.shields.io/badge/Logseq-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.2.2-green) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Plugin Demo](https://img.shields.io/badge/Logseq-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.3.0-green) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 Desktop and in-app notifications for scheduled blocks in Logseq. Never miss your scheduled tasks and reminders again!
 
@@ -31,11 +31,15 @@ Desktop and in-app notifications for scheduled blocks in Logseq. Never miss your
 - 🛡️ Duplicate notification prevention
 - ⏰ Past event filtering (ignores events older than 5 minutes)
 
-🚧 **TEMPORARILY DISABLED** (for stability):
-- Settings GUI (to prevent crashes)
-- Multiple reminder intervals
-- All-day reminders  
-- Quiet hours functionality
+✅ **NEW IN v1.3.0:**
+- ⚙️ Settings GUI (Logseq-native)
+- ⏱️ Multiple reminder intervals (comma-separated, e.g., `15,5,0`)
+- 📅 All-day reminders with configurable time (e.g., `09:00`)
+- 🔁 Polling interval and daily rescan hour configurable
+- 🔔 Refreshed bell icon for desktop notifications
+
+🚧 **Planned (not yet implemented):**
+- Quiet hours configuration
 
 ## Installation
 
@@ -91,20 +95,22 @@ For debugging, you can view plugin activity in the browser console (F12 → Cons
 
 ## Configuration
 
-**Current Settings (Hardcoded for Stability):**
-- Lead time: 0 minutes (notifications at scheduled time)
-- Check interval: 30 seconds  
-- Past event tolerance: 5 minutes (prevents spam from old events)
+Open Logseq → Settings → Plugins → Reminder Notifications.
 
-## 🔧 Recent Fixes (v1.2.2)
+Settings:
+- `Default Reminder Intervals` (string): Comma-separated minutes before event, e.g. `5,0` or `15,5,0`
+- `Enable All-Day Reminders` (boolean): Enable reminders for date-only schedules
+- `All-Day Reminder Time` (string): Time for all-day reminders, e.g. `09:00`
+- `Polling Interval (seconds)` (number): How often to check due reminders
+- `Daily Rescan Hour` (number): Hour of day to re-scan database
 
-This version fixes critical bugs from earlier releases:
+## 🔧 What’s New (v1.3.0)
 
-- ✅ **Fixed XCode crashes** - Removed problematic settings schema
-- ✅ **Fixed syntax error** - Repaired broken time parsing function  
-- ✅ **Fixed duplicate notifications** - Better past event filtering
-- ✅ **Fixed plugin conflicts** - Consistent plugin ID
-- ✅ **Restored functionality** - Notifications work reliably again
+- ✅ Added full Settings GUI using `logseq.useSettingsSchema()`
+- ✅ Configurable reminder intervals (comma-separated input)
+- ✅ Optional all-day reminders with custom time
+- ✅ Configurable polling interval and daily rescan hour
+- ✅ Updated desktop notification icon to a bell
 
 ## Troubleshooting
 
@@ -116,17 +122,16 @@ This version fixes critical bugs from earlier releases:
    - ❌ `SCHEDULED: <2025-10-14> Task` (no time)
 
 **Console debugging:**
-- Look for `🔔 Reminder Notifications plugin v1.2.2-BUGFIX starting...`
+- Look for `🔔 Reminder Notifications plugin v1.3.0 starting...`
 - Check for detailed parsing messages when running rescan
 
 ## Development Roadmap
 
-This is a **stable maintenance release** focused on reliability. Future versions will gradually re-add advanced features:
+Upcoming ideas:
 
-1. **v1.3.0**: Basic settings UI (lead time only)
-2. **v1.4.0**: Multiple reminder intervals  
-3. **v1.5.0**: All-day reminder support
-4. **v1.6.0**: Quiet hours and advanced features
+1. Quiet hours configuration
+2. Notification templates and sounds
+3. Advanced overdue handling and snooze
 
 ## Contributing
 
