@@ -5,7 +5,38 @@ All notable changes to the Logseq Reminder Notifications plugin will be document
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# Changelog
+## [1.3.0] - 2025-10-15 - FEATURE RELEASE
+### ✨ New Features
+- **Settings GUI**: Added comprehensive Logseq-native settings interface using `logseq.useSettingsSchema()`
+- **Multiple Reminder Intervals**: Support for comma-separated reminder intervals (e.g., "0,5,15" for reminders at scheduled time, 5 minutes before, and 15 minutes before)
+- **All-Day Reminders**: Optional support for date-only scheduled blocks with configurable reminder time
+- **Quiet Hours**: Disable notifications during specified hours (e.g., sleep hours from 10 PM to 7 AM)
+- **Configurable Polling**: Adjustable polling interval for checking due reminders with validation (10-300 seconds)
+- **Configurable Daily Rescan**: Set the hour for automatic daily database rescan with validation (0-23)
+- **Updated Notification Icon**: New bell icon for desktop notifications
+
+### 🔧 Improvements
+- Settings changes now trigger appropriate rescans automatically
+- Better handling of all-day scheduled blocks
+- Enhanced notification tracking with interval-specific keys
+- Improved settings validation with min/max constraints
+- Automatic cleanup of old notification records (hourly)
+- Refactored code with named constants for better maintainability
+- Removed unused localStorage code to prevent XCode interference
+
+### 🐛 Bug Fixes
+- Fixed duplicate workflow definitions in GitHub Actions
+- Fixed inconsistent package IDs between package.json and manifest.json
+- Removed duplicate code (utils/time.js was unused)
+- Fixed variable naming clarity (isAllDay → allDayDate)
+- Removed commented-out code for overdue reminders
+
+### 📝 Documentation
+- Added comprehensive SETTINGS-GUIDE.md with quiet hours documentation
+- Updated README with v1.3.0 features
+- Added screenshots for desktop and in-app notifications
+- Moved development documentation to docs/ folder
+- Updated CHANGELOG with complete v1.3.0 feature list
 
 ## [1.2.2] - 2025-10-14 - STABLE RELEASE
 ### 🚨 Critical Bug Fixes

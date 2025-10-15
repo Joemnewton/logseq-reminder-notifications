@@ -4,6 +4,17 @@
  */
 
 /**
+ * Constants
+ */
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const PERIODIC_RESCAN_INTERVAL_MS = 2 * 60 * 1000;
+const OVERDUE_NOTIFICATION_TIMEOUT_MS = 30000;
+const NORMAL_NOTIFICATION_TIMEOUT_MS = 10000;
+const CLEANUP_INTERVAL_MS = ONE_HOUR_MS; // Run cleanup every hour
+
+/**
  * Time parsing utilities - inline for Logseq compatibility
  */
 
@@ -88,10 +99,10 @@ function isWithinNext7Days(date) {
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const sevenDaysFromNow = new Date(startOfToday.getTime() + (7 * 24 * 60 * 60 * 1000));
-  
+  const sevenDaysFromNow = new Date(startOfToday.getTime() + SEVEN_DAYS_MS);
+
   // Allow a small tolerance (5 minutes) for "right now" notifications but block old past events
-  const fiveMinutesAgo = new Date(now.getTime() - (5 * 60 * 1000));
+  const fiveMinutesAgo = new Date(now.getTime() - FIVE_MINUTES_MS);
   return date >= fiveMinutesAgo && date <= sevenDaysFromNow;
 }
 
@@ -168,13 +179,6 @@ function getReminderIntervals() {
   }
 }
 
-/**
- * Check for overdue reminders - TEMPORARILY DISABLED
- * Function disabled to prevent duplicate notifications during testing
- */
-// async function checkOverdueReminder(reminder, alreadyNotified) {
-//   return false; // Always return false to skip overdue processing
-// }
 
 /**
  * Check for all-day schedule format (date without time)
@@ -266,18 +270,29 @@ function isTimeToNotify(scheduledTime, leadTimeMinutes = 0) {
  * @returns {boolean} - True if in quiet hours
  */
 function isInQuietHours(now) {
-  // Quiet hours temporarily disabled
-  const quietStart = 22; // 10 PM
-  const quietEnd = 7;    // 7 AM
-  const currentHour = now.getHours();
+  try {
+    const settings = logseq.settings || {};
 
-  // Handle overnight quiet hours (e.g., 22 to 7)
-  if (quietStart > quietEnd) {
-    return currentHour >= quietStart || currentHour < quietEnd;
-  }
-  // Handle same-day quiet hours (e.g., 13 to 15)
-  else {
-    return currentHour >= quietStart && currentHour < quietEnd;
+    // Check if quiet hours are enabled
+    if (!settings.enableQuietHours) {
+      return false;
+    }
+
+    const quietStart = settings.quietHoursStart || 22; // 10 PM default
+    const quietEnd = settings.quietHoursEnd || 7;    // 7 AM default
+    const currentHour = now.getHours();
+
+    // Handle overnight quiet hours (e.g., 22 to 7)
+    if (quietStart > quietEnd) {
+      return currentHour >= quietStart || currentHour < quietEnd;
+    }
+    // Handle same-day quiet hours (e.g., 13 to 15)
+    else {
+      return currentHour >= quietStart && currentHour < quietEnd;
+    }
+  } catch (error) {
+    console.error('Error checking quiet hours:', error);
+    return false; // Default to no quiet hours if error
   }
 }
 
@@ -285,40 +300,8 @@ function isInQuietHours(now) {
 let upcomingReminders = [];
 let pollInterval = null;
 let dailyRescanTimeout = null;
+let cleanupInterval = null;
 let alreadyNotified = {}; // Session-local tracking to prevent duplicates
-
-// Persistent notification tracking using localStorage
-const STORAGE_KEY = 'logseqNotifiedReminders';
-
-function getNotifiedReminders() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (error) {
-    console.error('Error retrieving notified reminders:', error);
-    return [];
-  }
-}
-
-function saveNotifiedReminders(notified) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notified));
-  } catch (error) {
-    console.error('Error saving notified reminders:', error);
-  }
-}
-
-function markNotified(reminderId) {
-  const notified = getNotifiedReminders();
-  if (!notified.includes(reminderId)) {
-    notified.push(reminderId);
-    saveNotifiedReminders(notified);
-  }
-}
-
-function hasBeenNotified(reminderId) {
-  return getNotifiedReminders().includes(reminderId);
-}
 
 /**
  * Main plugin initialization
@@ -355,15 +338,44 @@ function main() {
       key: "pollIntervalSeconds",
       type: "number",
       title: "Polling Interval (seconds)",
-      description: "How often to check for due reminders",
-      default: 30
+      description: "How often to check for due reminders (10-300 seconds)",
+      default: 30,
+      min: 10,
+      max: 300
     },
     {
       key: "dailyRescanHour",
       type: "number",
       title: "Daily Rescan Hour",
       description: "Hour of day to perform full rescan (0-23)",
-      default: 3
+      default: 3,
+      min: 0,
+      max: 23
+    },
+    {
+      key: "enableQuietHours",
+      type: "boolean",
+      title: "Enable Quiet Hours",
+      description: "Disable notifications during specified hours",
+      default: false
+    },
+    {
+      key: "quietHoursStart",
+      type: "number",
+      title: "Quiet Hours Start",
+      description: "Hour to start quiet hours (0-23, e.g., 22 for 10 PM)",
+      default: 22,
+      min: 0,
+      max: 23
+    },
+    {
+      key: "quietHoursEnd",
+      type: "number",
+      title: "Quiet Hours End",
+      description: "Hour to end quiet hours (0-23, e.g., 7 for 7 AM)",
+      default: 7,
+      min: 0,
+      max: 23
     }
   ]);
 
@@ -543,37 +555,37 @@ async function findBlocksWithScheduledProperty() {
 function parseBlockForReminder(block) {
   try {
     let scheduledTime = null;
-    let isAllDay = false;
-    
+    let allDayDate = null;
+
     // Try to parse from content first (SCHEDULED: format)
     if (block.type === 'content') {
       scheduledTime = parseScheduledDateTime(block.content);
-      
+
       // Check for all-day reminders if enabled in settings
       if (!scheduledTime) {
         const settings = logseq.settings || {};
         if (settings.enableAllDayReminders) {
-          isAllDay = checkForAllDaySchedule(block.content);
+          allDayDate = checkForAllDaySchedule(block.content);
         }
       }
     }
-    
+
     // Try to parse from property if content parsing failed or this is a property block
     if (!scheduledTime && block.scheduledProperty) {
       scheduledTime = parseScheduledDateTime(block.scheduledProperty);
-      
+
       // Check for all-day reminders if enabled in settings
       if (!scheduledTime) {
         const settings = logseq.settings || {};
         if (settings.enableAllDayReminders) {
-          isAllDay = checkForAllDaySchedule(block.scheduledProperty);
+          allDayDate = checkForAllDaySchedule(block.scheduledProperty);
         }
       }
     }
-    
+
     // Handle all-day reminders
-    if (isAllDay) {
-      scheduledTime = createAllDayReminderTime(isAllDay);
+    if (allDayDate) {
+      scheduledTime = createAllDayReminderTime(allDayDate);
     }
     
     if (!scheduledTime) {
@@ -615,6 +627,9 @@ function setupPolling() {
   if (window.periodicRescanInterval) {
     clearInterval(window.periodicRescanInterval);
   }
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+  }
 
   const settings = logseq.settings || {};
   const intervalSeconds = settings.pollIntervalSeconds || 30;
@@ -629,7 +644,12 @@ function setupPolling() {
   window.periodicRescanInterval = setInterval(async () => {
     console.log('🔄 Periodic rescan (every 2 minutes)...');
     await scanForUpcomingReminders();
-  }, 2 * 60 * 1000); // 2 minutes
+  }, PERIODIC_RESCAN_INTERVAL_MS);
+
+  // Cleanup old notification records every hour
+  cleanupInterval = setInterval(() => {
+    cleanupOldNotificationRecords();
+  }, CLEANUP_INTERVAL_MS);
 }
 
 /**
@@ -657,7 +677,7 @@ async function checkForDueReminders() {
       
       // Skip notifications for significantly past events (but allow small delays)
       const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - (5 * 60 * 1000));
+      const fiveMinutesAgo = new Date(now.getTime() - FIVE_MINUTES_MS);
       const isSignificantlyPast = reminder.when < fiveMinutesAgo;
       
       console.log(`  📋 "${reminder.content.substring(0, 30)}..." scheduled for ${formatDateTimeForNotification(reminder.when)}`);
@@ -685,16 +705,7 @@ async function checkForDueReminders() {
         }
       }
     }
-    
-    // Check for overdue reminders (but don't double-process)
-    // This is handled separately to avoid duplicate processing
   }
-
-  // Overdue reminders temporarily disabled to prevent duplicate notifications
-  // TODO: Re-implement with better logic
-
-  // Note: No longer saving notification status to persistent storage
-  // This prevents XCode from opening settings.json files
 }
 
 /**
@@ -756,7 +767,7 @@ async function sendNotification(reminder, intervalMinutes = 0, isOverdue = false
       console.log('✅ Desktop notification created');
 
       // Auto-close notification (longer for overdue)
-      const timeout = isOverdue ? 30000 : 10000;
+      const timeout = isOverdue ? OVERDUE_NOTIFICATION_TIMEOUT_MS : NORMAL_NOTIFICATION_TIMEOUT_MS;
       setTimeout(() => {
         notification.close();
       }, timeout);
@@ -809,9 +820,9 @@ function scheduleDailyRescan() {
 function cleanupOldNotificationRecords() {
   try {
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
+    const oneHourAgo = new Date(now.getTime() - ONE_HOUR_MS);
     let removedCount = 0;
-    
+
     // Remove entries for notifications older than 1 hour
     for (const [key, timestampStr] of Object.entries(alreadyNotified)) {
       const timestamp = new Date(timestampStr);
@@ -820,7 +831,7 @@ function cleanupOldNotificationRecords() {
         removedCount++;
       }
     }
-    
+
     if (removedCount > 0) {
       console.log(`🧹 Cleaned up ${removedCount} old notification records from session`);
     }
@@ -834,30 +845,42 @@ function cleanupOldNotificationRecords() {
  */
 logseq.onSettingsChanged((newSettings, oldSettings) => {
   console.log('⚙️ Settings changed');
-  
+
   // Restart polling if interval changed
   if (newSettings.pollIntervalSeconds !== oldSettings.pollIntervalSeconds) {
     console.log('🔄 Restarting polling with new interval');
     setupPolling();
   }
-  
+
   // Reschedule daily rescan if hour changed
   if (newSettings.dailyRescanHour !== oldSettings.dailyRescanHour) {
     console.log('🔄 Rescheduling daily rescan');
     scheduleDailyRescan();
   }
-  
+
   // Rescan if reminder intervals changed
   if (newSettings.defaultReminderIntervals !== oldSettings.defaultReminderIntervals) {
     console.log('🔄 Reminder intervals changed, rescanning for reminders');
     scanForUpcomingReminders();
   }
-  
+
   // Rescan if all-day reminder settings changed
-  if (newSettings.enableAllDayReminders !== oldSettings.enableAllDayReminders || 
+  if (newSettings.enableAllDayReminders !== oldSettings.enableAllDayReminders ||
       newSettings.allDayReminderTime !== oldSettings.allDayReminderTime) {
     console.log('🔄 All-day reminder settings changed, rescanning for reminders');
     scanForUpcomingReminders();
+  }
+
+  // Log quiet hours changes (no action needed, applied on next notification check)
+  if (newSettings.enableQuietHours !== oldSettings.enableQuietHours ||
+      newSettings.quietHoursStart !== oldSettings.quietHoursStart ||
+      newSettings.quietHoursEnd !== oldSettings.quietHoursEnd) {
+    console.log('🔄 Quiet hours settings changed');
+    if (newSettings.enableQuietHours) {
+      console.log(`   Quiet hours: ${newSettings.quietHoursStart}:00 to ${newSettings.quietHoursEnd}:00`);
+    } else {
+      console.log('   Quiet hours disabled');
+    }
   }
 });
 
@@ -878,24 +901,28 @@ function setupBlockChangeListeners() {
  */
 logseq.beforeunload(() => {
   console.log('👋 Reminder Notifications plugin unloading...');
-  
+
   if (pollInterval) {
     clearInterval(pollInterval);
   }
-  
+
   if (window.periodicRescanInterval) {
     clearInterval(window.periodicRescanInterval);
   }
-  
+
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+  }
+
   if (dailyRescanTimeout) {
     clearTimeout(dailyRescanTimeout);
   }
-  
+
   // Clear any pending rescans
   if (window.scheduleRescanTimeout) {
     clearTimeout(window.scheduleRescanTimeout);
   }
-  
+
   if (window.pageChangeRescanTimeout) {
     clearTimeout(window.pageChangeRescanTimeout);
   }

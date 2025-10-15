@@ -8,12 +8,6 @@ Desktop and in-app notifications for scheduled blocks in Logseq. Never miss your
 
 ## 🎬 Demo
 
-<!-- TODO: Add screenshots/GIF showing:
-1. Desktop notification popup
-2. In-app notification in Logseq
-3. Plugin working with scheduled block
--->
-
 ![Desktop Notification Demo](./screenshots/Desktop_Notification.png)
 *Desktop notification and in-app message for scheduled reminders*
 
@@ -37,9 +31,7 @@ Desktop and in-app notifications for scheduled blocks in Logseq. Never miss your
 - 📅 All-day reminders with configurable time (e.g., `09:00`)
 - 🔁 Polling interval and daily rescan hour configurable
 - 🔔 Refreshed bell icon for desktop notifications
-
-🚧 **Planned (not yet implemented):**
-- Quiet hours configuration
+- 🌙 Quiet hours to disable notifications during specified times
 
 ## Installation
 
@@ -101,16 +93,20 @@ Settings:
 - `Default Reminder Intervals` (string): Comma-separated minutes before event, e.g. `5,0` or `15,5,0`
 - `Enable All-Day Reminders` (boolean): Enable reminders for date-only schedules
 - `All-Day Reminder Time` (string): Time for all-day reminders, e.g. `09:00`
-- `Polling Interval (seconds)` (number): How often to check due reminders
-- `Daily Rescan Hour` (number): Hour of day to re-scan database
+- `Polling Interval (seconds)` (number): How often to check due reminders (10-300 seconds)
+- `Daily Rescan Hour` (number): Hour of day to re-scan database (0-23)
+- `Enable Quiet Hours` (boolean): Disable notifications during specified hours
+- `Quiet Hours Start` (number): Hour to start quiet hours (0-23, e.g., 22 for 10 PM)
+- `Quiet Hours End` (number): Hour to end quiet hours (0-23, e.g., 7 for 7 AM)
 
-## 🔧 What’s New (v1.3.0)
+## 🔧 What's New (v1.3.0)
 
 - ✅ Added full Settings GUI using `logseq.useSettingsSchema()`
 - ✅ Configurable reminder intervals (comma-separated input)
 - ✅ Optional all-day reminders with custom time
 - ✅ Configurable polling interval and daily rescan hour
 - ✅ Updated desktop notification icon to a bell
+- ✅ Quiet hours feature to disable notifications during sleep/work hours
 
 ## Troubleshooting
 
@@ -129,9 +125,9 @@ Settings:
 
 Upcoming ideas:
 
-1. Quiet hours configuration
-2. Notification templates and sounds
-3. Advanced overdue handling and snooze
+1. Notification templates and custom sounds
+2. Advanced overdue handling and snooze functionality
+3. Repeating/recurring reminders
 
 ## Contributing
 

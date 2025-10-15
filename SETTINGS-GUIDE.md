@@ -55,6 +55,33 @@ This setting controls how often the plugin checks for due reminders. Lower value
 
 This setting specifies the hour of day (in 24-hour format) when the plugin performs a full rescan of all scheduled blocks. This helps catch any blocks that might have been missed during normal operation.
 
+### 6. Enable Quiet Hours
+**Setting:** `enableQuietHours`
+**Type:** Boolean
+**Default:** `false`
+
+When enabled, notifications will be suppressed during the hours specified in Quiet Hours Start and Quiet Hours End. This is useful for preventing notifications during sleep hours or work meetings.
+
+### 7. Quiet Hours Start
+**Setting:** `quietHoursStart`
+**Type:** Number
+**Default:** `22`
+**Range:** 0-23
+
+The hour when quiet hours begin (24-hour format). For example, 22 means 10:00 PM.
+
+**Note:** This setting only takes effect when `enableQuietHours` is set to `true`.
+
+### 8. Quiet Hours End
+**Setting:** `quietHoursEnd`
+**Type:** Number
+**Default:** `7`
+**Range:** 0-23
+
+The hour when quiet hours end (24-hour format). For example, 7 means 7:00 AM.
+
+**Note:** This setting only takes effect when `enableQuietHours` is set to `true`. Quiet hours can span across midnight (e.g., 22 to 7 for 10 PM to 7 AM).
+
 ## How to Use Settings
 
 1. Open Logseq
@@ -97,3 +124,9 @@ To check for reminders every 15 seconds:
 - Set `pollIntervalSeconds` to `15`
 
 **Note:** Very frequent polling may impact performance.
+
+### Example 4: Quiet Hours
+To disable notifications from 10 PM to 7 AM:
+- Set `enableQuietHours` to `true`
+- Set `quietHoursStart` to `22`
+- Set `quietHoursEnd` to `7`

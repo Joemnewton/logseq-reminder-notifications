@@ -8,48 +8,16 @@ on:
 permissions:
   contents: write
 
-jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Prepare artifact
-        run: |
-          mkdir -p dist
-          # Create plugin zip excluding git metadata and CI files
-          zip -r dist/logseq-reminder-notifications.zip . \
-            -x "**/.git/**" \
-               "**/.github/**" \
-               "**/node_modules/**" \
-               "**/.DS_Store" \
-               "**/screenshots/**"
-
-      - name: Upload release asset
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: dist/logseq-reminder-notifications.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-name: Build plugin
-
-on:
-  push:
-    tags:
-      - "*"
-
 env:
   PLUGIN_NAME: logseq-reminder-notifications
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Use Node.js
         uses: actions/setup-node@v3
@@ -60,18 +28,22 @@ jobs:
         run: |
           # Create the plugin package
           mkdir -p dist
-          
+
           # Copy all necessary files except development files
-          cp -r *.js *.json *.md *.svg LICENSE dist/ 2>/dev/null || true
-          cp -r utils dist/ 2>/dev/null || true
-          
+          cp -r *.js *.json *.svg LICENSE dist/ 2>/dev/null || true
+
           # Remove any unnecessary files from dist
           rm -f dist/.gitignore dist/yarn.lock dist/package-lock.json 2>/dev/null || true
-          
+
           # Create the zip file
           cd dist
-          zip -r ../${{ env.PLUGIN_NAME }}.zip .
-          cd ..
+          zip -r ../${{ env.PLUGIN_NAME }}.zip . \
+            -x "**/.git/**" \
+               "**/.github/**" \
+               "**/node_modules/**" \
+               "**/.DS_Store" \
+               "**/docs/**" \
+               "**/screenshots/**"
 
       - name: Create Release
         uses: ncipollo/release-action@v1

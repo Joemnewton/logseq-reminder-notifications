@@ -1,12 +1,12 @@
 {
-  "name": "logseq-reminder-plugin",
+  "name": "logseq-reminder-notifications",
   "version": "1.3.0",
   "description": "Desktop and in-app notifications for scheduled blocks in Logseq",
   "main": "index.js",
-  "author": "Logseq Community",
+  "author": "Joemnewton",
   "license": "MIT",
   "logseq": {
-    "id": "logseq-reminder-plugin", 
+    "id": "logseq-reminder-notifications",
     "title": "Reminder Notifications",
     "icon": "./icon.svg"
   }
