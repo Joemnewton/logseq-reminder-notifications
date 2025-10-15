@@ -257,6 +257,39 @@ let pollInterval = null;
 let dailyRescanTimeout = null;
 let alreadyNotified = {}; // Session-local tracking to prevent duplicates
 
+// Persistent notification tracking using localStorage
+const STORAGE_KEY = 'logseqNotifiedReminders';
+
+function getNotifiedReminders() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (error) {
+    console.error('Error retrieving notified reminders:', error);
+    return [];
+  }
+}
+
+function saveNotifiedReminders(notified) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notified));
+  } catch (error) {
+    console.error('Error saving notified reminders:', error);
+  }
+}
+
+function markNotified(reminderId) {
+  const notified = getNotifiedReminders();
+  if (!notified.includes(reminderId)) {
+    notified.push(reminderId);
+    saveNotifiedReminders(notified);
+  }
+}
+
+function hasBeenNotified(reminderId) {
+  return getNotifiedReminders().includes(reminderId);
+}
+
 /**
  * Main plugin initialization
  */
