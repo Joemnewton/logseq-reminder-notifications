@@ -8,11 +8,7 @@
  */
 
 /**
- * Parse a Logseq timestamp like <2025-10-14 Tue 14:30> or property vafunction main() {
-  console.log('🔔 Reminder Notifications Plugin v1.2.2 loaded');
-
-  // Request notification permission early
-  requestNotificationPermission();e "2025-10-14 14:30"
+ * Parse a Logseq timestamp like <2025-10-14 Tue 14:30> or property value "2025-10-14 14:30"
  * @param {string} text - The text to parse
  * @returns {Date|null} - Parsed date or null if invalid/no time
  */
@@ -150,9 +146,26 @@ function getNotificationKey(uuid, scheduledDate, intervalMinutes = 0) {
  * @returns {number[]} - Array of reminder intervals in minutes
  */
 function getReminderIntervals() {
-  // Fixed single reminder - no settings dependency  
-  const leadTime = 0; // Fixed 0 minutes for debugging
-  return [leadTime];
+  try {
+    const settings = logseq.settings || {};
+    const intervalsString = settings.defaultReminderIntervals || "0,5";
+    
+    // Parse comma-separated string (e.g., "0,5,15" or "0,5")
+    const intervals = intervalsString
+      .split(',')
+      .map(s => parseInt(s.trim()))
+      .filter(n => !isNaN(n) && n >= 0);
+    
+    // Sort intervals in descending order (furthest out first)
+    intervals.sort((a, b) => b - a);
+    
+    console.log('🔧 Using reminder intervals from settings:', intervals);
+    return intervals;
+  } catch (error) {
+    console.error('❌ Error reading reminder intervals from settings:', error);
+    // Fallback to default
+    return [5, 0];
+  }
 }
 
 /**
@@ -200,11 +213,28 @@ function checkForAllDaySchedule(text) {
 function createAllDayReminderTime(date) {
   if (!date) return null;
 
-  const reminderHour = 9; // Fixed 9 AM for debugging
-  const hours = Math.floor(reminderHour);
-  const minutes = Math.round((reminderHour - hours) * 60);
-
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0, 0);
+  try {
+    const settings = logseq.settings || {};
+    const timeString = settings.allDayReminderTime || "09:00";
+    
+    // Parse time string (e.g., "09:00" or "14:30")
+    const [hoursStr, minutesStr] = timeString.split(':');
+    const hours = parseInt(hoursStr) || 9;
+    const minutes = parseInt(minutesStr) || 0;
+    
+    // Validate time values
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      console.warn('⚠️ Invalid all-day reminder time in settings, using default 09:00');
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9, 0, 0, 0);
+    }
+    
+    console.log(`🔧 Using all-day reminder time from settings: ${timeString}`);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0, 0);
+  } catch (error) {
+    console.error('❌ Error reading all-day reminder time from settings:', error);
+    // Fallback to default 9 AM
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9, 0, 0, 0);
+  }
 }
 
 /**
@@ -294,9 +324,48 @@ function hasBeenNotified(reminderId) {
  * Main plugin initialization
  */
 function main() {
-  console.log('🔔 Reminder Notifications plugin v1.2.1-BUGFIX starting...');
+  console.log('🔔 Reminder Notifications plugin v1.3.0 starting...');
   console.log('🔧 Debug: Settings available:', Object.keys(logseq.settings || {}));
   console.log('🔧 Debug: Using session-only notification tracking');
+
+  // Define settings schema
+  logseq.useSettingsSchema([
+    {
+      key: "defaultReminderIntervals",
+      type: "string",
+      title: "Default Reminder Intervals",
+      description: "Set reminder intervals in minutes before scheduled time (comma-separated, e.g., '0,5,15')",
+      default: "0,5"
+    },
+    {
+      key: "enableAllDayReminders",
+      type: "boolean",
+      title: "Enable All-Day Reminders",
+      description: "Send reminders for blocks scheduled for a day without specific time",
+      default: false
+    },
+    {
+      key: "allDayReminderTime",
+      type: "string",
+      title: "All-Day Reminder Time",
+      description: "Time to send reminders for all-day scheduled blocks (24-hour format, e.g., 09:00)",
+      default: "09:00"
+    },
+    {
+      key: "pollIntervalSeconds",
+      type: "number",
+      title: "Polling Interval (seconds)",
+      description: "How often to check for due reminders",
+      default: 30
+    },
+    {
+      key: "dailyRescanHour",
+      type: "number",
+      title: "Daily Rescan Hour",
+      description: "Hour of day to perform full rescan (0-23)",
+      default: 3
+    }
+  ]);
 
   // Request notification permission early
   requestNotificationPermission();
@@ -480,9 +549,12 @@ function parseBlockForReminder(block) {
     if (block.type === 'content') {
       scheduledTime = parseScheduledDateTime(block.content);
       
-      // All-day reminders disabled for stability
-      if (!scheduledTime && false) {
-        isAllDay = checkForAllDaySchedule(block.content);
+      // Check for all-day reminders if enabled in settings
+      if (!scheduledTime) {
+        const settings = logseq.settings || {};
+        if (settings.enableAllDayReminders) {
+          isAllDay = checkForAllDaySchedule(block.content);
+        }
       }
     }
     
@@ -490,9 +562,12 @@ function parseBlockForReminder(block) {
     if (!scheduledTime && block.scheduledProperty) {
       scheduledTime = parseScheduledDateTime(block.scheduledProperty);
       
-      // All-day reminders disabled for stability
-      if (!scheduledTime && false) {
-        isAllDay = checkForAllDaySchedule(block.scheduledProperty);
+      // Check for all-day reminders if enabled in settings
+      if (!scheduledTime) {
+        const settings = logseq.settings || {};
+        if (settings.enableAllDayReminders) {
+          isAllDay = checkForAllDaySchedule(block.scheduledProperty);
+        }
       }
     }
     
@@ -541,7 +616,8 @@ function setupPolling() {
     clearInterval(window.periodicRescanInterval);
   }
 
-  const intervalSeconds = 30; // Fixed interval for debugging
+  const settings = logseq.settings || {};
+  const intervalSeconds = settings.pollIntervalSeconds || 30;
   console.log(`⏱️ Setting up polling every ${intervalSeconds} seconds`);
 
   // Check for due reminders
@@ -669,7 +745,7 @@ async function sendNotification(reminder, intervalMinutes = 0, isOverdue = false
       
       const notificationOptions = {
         body: message,
-        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDMTMuMSAyIDE0IDIuOSAxNCA0VjVIMTZDMTcuMSA1IDE4IDUuOSAxOCA3VjE5QzE4IDIwLjEgMTcuMSAyMSAxNiAyMUg4QzYuOSAyMSA2IDIwLjEgNiAxOVY3QzYgNS45IDYuOSA1IDggNUgxMFY0QzEwIDIuOSAxMC45IDIgMTIgMlpNMTIgNEMxMS40IDQgMTEgNC40IDExIDVIMTNDMTMgNC40IDEyLjYgNCAxMiA0Wk0xNiA3SDhWMTlIMTZWN1oiIGZpbGw9IiMzMzMiLz4KPC9zdmc+Cg==',
+        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDMTAuOSAyIDEwIDIuOSAxMCA0VjVINkM0LjkgNSA0IDUuOSA0IDdWMTdDNCAxOC4xIDQuOSAxOSA2IDE5SDE4QzE5LjEgMTkgMjAgMTguMSAyMCAxN1Y3QzIwIDUuOSAxOS4xIDUgMTggNUgxNFY0QzE0IDIuOSAxMy4xIDIgMTIgMlpNMTIgNEMxMi41IDQgMTMgNC40IDEzIDVIMTFDMTEgNC40IDExLjUgNCAxMiA0Wk0xOCA3VjE3SDZWN0gxOFpNMTIgMjBDMTMuMSAyMCAxNCAxOS4xIDE0IDE4SDEwQzEwIDE5LjEgMTAuOSAyMCAxMiAyMFoiIGZpbGw9IiNmNTk1MDAiLz4KPC9zdmc+',
         tag: `${reminder.uuid}_${intervalMinutes}`,
         requireInteraction: isOverdue, // Overdue notifications require interaction
         silent: false // Always allow notification sound
@@ -704,7 +780,8 @@ function scheduleDailyRescan() {
     clearTimeout(dailyRescanTimeout);
   }
 
-  const rescanHour = 3; // Fixed 3 AM rescan for simplicity
+  const settings = logseq.settings || {};
+  const rescanHour = settings.dailyRescanHour || 3;
   const now = new Date();
   const nextRescan = new Date();
   
@@ -768,6 +845,19 @@ logseq.onSettingsChanged((newSettings, oldSettings) => {
   if (newSettings.dailyRescanHour !== oldSettings.dailyRescanHour) {
     console.log('🔄 Rescheduling daily rescan');
     scheduleDailyRescan();
+  }
+  
+  // Rescan if reminder intervals changed
+  if (newSettings.defaultReminderIntervals !== oldSettings.defaultReminderIntervals) {
+    console.log('🔄 Reminder intervals changed, rescanning for reminders');
+    scanForUpcomingReminders();
+  }
+  
+  // Rescan if all-day reminder settings changed
+  if (newSettings.enableAllDayReminders !== oldSettings.enableAllDayReminders || 
+      newSettings.allDayReminderTime !== oldSettings.allDayReminderTime) {
+    console.log('🔄 All-day reminder settings changed, rescanning for reminders');
+    scanForUpcomingReminders();
   }
 });
 
