@@ -2,7 +2,22 @@
 
 **v1.2.2 - STABLE RELEASE** 🚀
 
-Desktop and in-app notifications for scheduled blocks in Logseq.
+![Plugin Demo](https://img.shields.io/badge/Logseq-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.2.2-green) ![License](https://img.shields.io/badge/license-MIT-blue)
+
+Desktop and in-app notifications for scheduled blocks in Logseq. Never miss your scheduled tasks and reminders again!
+
+## 🎬 Demo
+
+<!-- TODO: Add screenshots/GIF showing:
+1. Desktop notification popup
+2. In-app notification in Logseq
+3. Plugin working with scheduled block
+-->
+
+![Reminder Notification Demo](https://via.placeholder.com/600x300/4A5568/FFFFFF?text=Demo+Screenshot+Coming+Soon)
+*Desktop notification and in-app message for scheduled reminders*
+
+## ✨ Key Features
 
 ## 🎯 Current Status
 
@@ -57,6 +72,20 @@ SCHEDULED: <2025-10-15 Tue 09:00> Team meeting
 ### Commands
 
 - `/reminders: rescan` - Manually refresh reminder list
+
+## 📺 Screenshots
+
+### Desktop Notifications
+![Desktop Notification](https://via.placeholder.com/400x100/2D3748/FFFFFF?text=Desktop+Notification+Screenshot)
+*Native desktop notification that appears even when Logseq is minimized*
+
+### In-App Notifications  
+![In-App Message](https://via.placeholder.com/400x100/2D3748/FFFFFF?text=In-App+Message+Screenshot)
+*Toast message that appears within Logseq when you're actively using the app*
+
+### Console Output
+![Console Debug](https://via.placeholder.com/600x200/1A202C/FFFFFF?text=Console+Debug+Output+Screenshot)
+*Debug information showing plugin scanning and processing scheduled blocks*
 
 ## Configuration
 

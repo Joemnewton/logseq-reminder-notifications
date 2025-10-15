@@ -1,46 +1,11 @@
 {
-  "name": "logseq-reminder-plugin",
-  "id": "logseq-reminder-plugin", 
-  "version": "1.0.0",
-  "description": "Desktop and in-app notifications for scheduled blocks in Logseq",
-  "author": "Logseq Community",
-  "license": "MIT",
-  "main": "index.js",
-  "logseq": {
-    "id": "logseq-reminder-plugin",
-    "title": "Reminder Notifications",
-    "main": "index.js",
-    "settings": {
-      "leadTimeMinutes": {
-        "title": "Lead Time (minutes)",
-        "description": "How many minutes before scheduled time to show notification",
-        "type": "number",
-        "default": 0,
-        "minimum": 0,
-        "maximum": 60
-      },
-      "pollIntervalSeconds": {
-        "title": "Check Interval (seconds)",
-        "description": "How often to check for due reminders", 
-        "type": "number",
-        "default": 30,
-        "minimum": 10,
-        "maximum": 300
-      },
-      "dailyRescanHour": {
-        "title": "Daily Rescan Hour (24h format)",
-        "description": "Hour of day to automatically rescan for new scheduled blocks",
-        "type": "number", 
-        "default": 3,
-        "minimum": 0,
-        "maximum": 23
-      },
-      "alreadyNotified": {
-        "title": "Internal: Already Notified",
-        "description": "Internal storage for preventing duplicate notifications",
-        "type": "object",
-        "default": {}
-      }
-    }
-  }
+  "title": "Reminder Notifications",
+  "description": "Desktop and in-app notifications for scheduled blocks in Logseq. Never miss your scheduled tasks and reminders again!",
+  "author": "Joemnewton",
+  "repo": "Joemnewton/logseq-reminder-notifications",
+  "icon": "./icon.svg",
+  "theme": false,
+  "effect": false,
+  "web": false,
+  "sponsors": []
 }
