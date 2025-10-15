@@ -14,7 +14,7 @@ Desktop and in-app notifications for scheduled blocks in Logseq. Never miss your
 3. Plugin working with scheduled block
 -->
 
-![Reminder Notification Demo](./screenshots/demo.gif)
+![Desktop Notification Demo](./screenshots/Desktop_Notification.png)
 *Desktop notification and in-app message for scheduled reminders*
 
 ## ✨ Key Features
@@ -76,16 +76,18 @@ SCHEDULED: <2025-10-15 Tue 09:00> Team meeting
 ## 📺 Screenshots
 
 ### Desktop Notifications
-![Desktop Notification](./screenshots/desktop-notification.png)
+![Desktop Notification](./screenshots/Desktop_Notification.png)
 *Native desktop notification that appears even when Logseq is minimized*
 
 ### In-App Notifications  
-![In-App Message](./screenshots/in-app-message.png)
+![In-App Message](./screenshots/In_App_Notification.png)
 *Toast message that appears within Logseq when you're actively using the app*
 
-### Console Output
-![Console Debug](./screenshots/console-output.png)
-*Debug information showing plugin scanning and processing scheduled blocks*
+### Console Output (Optional)
+For debugging, you can view plugin activity in the browser console (F12 → Console tab):
+- Plugin startup messages
+- Block scanning and detection logs  
+- Notification trigger events
 
 ## Configuration
 
